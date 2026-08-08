@@ -1,6 +1,6 @@
 import p5 from "p5";
-import { createController, LED_COLOR } from "ts-midi-apc-mini-mk2";
-import type { APCMiniMK2Controller, LedColorType, MidiBindingConfig } from "ts-midi-apc-mini-mk2";
+import { createController, LED_COLOR } from "../src";
+import type { APCMiniMK2Controller, LedColorType, MidiBindingConfig } from "../src";
 
 type DemoKey = "strobo" | "sceneSelect";
 
@@ -40,7 +40,7 @@ const sketch = (p: p5): void => {
   let midiError: string | null = null;
 
   p.setup = () => {
-    p.createCanvas(window.innerWidth, window.innerHeight);
+    p.createCanvas(p.windowWidth, p.windowHeight);
     p.noStroke();
     p.textAlign(p.CENTER, p.CENTER);
   };
@@ -101,7 +101,7 @@ const sketch = (p: p5): void => {
   };
 
   p.windowResized = () => {
-    p.resizeCanvas(window.innerWidth, window.innerHeight);
+    p.resizeCanvas(p.windowWidth, p.windowHeight);
   };
 
   window.addEventListener(
@@ -113,4 +113,5 @@ const sketch = (p: p5): void => {
   );
 };
 
-void new p5(sketch);
+const appRoot = document.getElementById("app");
+void new p5(sketch, appRoot ?? undefined);

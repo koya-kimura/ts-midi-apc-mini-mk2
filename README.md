@@ -134,6 +134,16 @@ npm run build
 
 代表的な p5 デモは `demo/minimal.ts` にあります。
 
+### デモ実行
+
+```bash
+npm install
+npm run dev
+```
+
+ブラウザで表示された URL の `/demo/` を開くと、`demo/index.html` から `demo/minimal.ts` を確認できます。
+例: `http://localhost:5173/demo/`
+
 ## License
 
 MIT
