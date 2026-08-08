@@ -1,0 +1,43 @@
+{
+  "name": "ts-midi-apc-mini-mk2",
+  "version": "0.1.0",
+  "description": "TypeScript MIDI controller library for Akai APC mini mk2 with WebMIDI",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "author": "kimurakoya",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run clean && tsup src/index.ts --format esm,cjs --dts --sourcemap --out-dir dist",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run clean && npm run typecheck && npm run build"
+  },
+  "keywords": [
+    "midi",
+    "apc-mini",
+    "apc-mini-mk2",
+    "webmidi",
+    "controller",
+    "vj"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/p5": "^1.7.6",
+    "p5": "^1.11.10",
+    "tsup": "^8.3.5",
+    "typescript": "^5.5.0"
+  }
+}
