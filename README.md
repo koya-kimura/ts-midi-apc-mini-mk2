@@ -68,16 +68,16 @@ controller.destroy();
 
 ## API
 
-### createController<K>(options)
+### createController<TKey>(options)
 
-`APCMiniMK2Controller<K>` を返します。
+`APCMiniMK2Controller<TKey>` を返します。
 
 ### オプション
 
-| プロパティ             | 型                                     | 必須   | 説明                                                                    |
-| ---------------------- | -------------------------------------- | ------ | ----------------------------------------------------------------------- |
-| `mapping`              | `MidiBindingConfig<K, LedColorType>[]` | はい   | グリッドバインディング定義                                              |
-| `faderButtonFunctions` | `FaderButtonFunction[]`                | いいえ | フェーダーごとのモード機能（`"random"` または `"mute"`）。長さは 9 必須 |
+| プロパティ             | 型                                        | 必須   | 説明                                                                    |
+| ---------------------- | ----------------------------------------- | ------ | ----------------------------------------------------------------------- |
+| `mapping`              | `MidiBindingConfig<TKey, LedColorType>[]` | はい   | グリッドバインディング定義                                              |
+| `faderButtonFunctions` | `FaderButtonFunction[]`                   | いいえ | フェーダーごとのモード機能（`"random"` または `"mute"`）。長さは 9 必須 |
 
 ### Controller API
 
