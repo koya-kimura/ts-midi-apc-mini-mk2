@@ -86,7 +86,7 @@ controller.destroy();
 | `init()`              | `Promise<void>` | WebMIDI 接続を初期化します                                        |
 | `destroy()`           | `void`          | MIDI イベントハンドラを解除し、ランタイム参照を解放します         |
 | `update(beat)`        | `void`          | beat 同期更新と LED 出力を同期的に反映します                      |
-| `midiSuccess`         | `boolean`       | デバイス入力の解決に成功した場合 `true` です                      |
+| `midiSuccess`         | `boolean`       | 現在デバイス入力に接続中なら `true` です（抜き差しで動的に更新） |
 | `faderValue(index)`   | `number`        | 正規化済みフェーダー値 `0..1`（またはモード反映後の値）を返します |
 | `booleanValue(key)`   | `boolean`       | toggle/oneshot/momentary/random の状態を返します                  |
 | `radioValue(key)`     | `number`        | 選択中の radio index を返します                                   |
@@ -107,6 +107,7 @@ controller.destroy();
 
 - WebMIDI の利用可否や権限仕様はブラウザごとに異なります。
 - ブラウザポリシー上必要な場合は、`init()` をユーザー操作イベント内で呼んでください。
+- デバイスの抜き差し時は自動で再バインドを試みます。
 - 本番 VJ システムでは `midiSuccess === false` を非致命分岐として扱ってください。
 
 ## FAQ

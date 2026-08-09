@@ -55,6 +55,7 @@ export class APCMiniMK2Manager<TKey extends string = string> extends MidiManager
   private _sequenceSteps = new Map<TKey, boolean[]>();
   private _currentBeat = 0;
   private _prevBeatIndex = -1;
+  private _bindingsRegistered = false;
 
   constructor(options: APCMiniMK2Options<TKey>) {
     super(DEFAULT_DEVICE_NAME);
@@ -138,8 +139,28 @@ export class APCMiniMK2Manager<TKey extends string = string> extends MidiManager
   }
 
   protected onDeviceSetup(): void {
-    this.registerButtons();
+    if (!this._bindingsRegistered) {
+      this.registerButtons();
+      this._bindingsRegistered = true;
+    }
+
     this._ledsDirty = true;
+  }
+
+  protected override onMidiAvailabilityChanged(available: boolean): void {
+    if (!available) {
+      return;
+    }
+
+    // Repaint current state right after a successful rebind.
+    this._ledsDirty = true;
+    this.flushOutputIfNeeded();
+  }
+
+  protected override onMidiOutputReady(): void {
+    // Output can come back after input; force an immediate LED snapshot.
+    this._ledsDirty = true;
+    this.flushOutputIfNeeded();
   }
 
   protected processMidiMessage(status: number, data1: number, data2: number): void {
@@ -159,6 +180,7 @@ export class APCMiniMK2Manager<TKey extends string = string> extends MidiManager
     this._currentBeat = 0;
     this._prevBeatIndex = -1;
     this._ledsDirty = false;
+    this._bindingsRegistered = false;
   }
 
   private registerButtons(): void {

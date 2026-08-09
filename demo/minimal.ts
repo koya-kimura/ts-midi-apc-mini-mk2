@@ -33,21 +33,77 @@ const paletteByScene = [
   { bg: "#25170a", accent: "#ffd166" },
 ];
 
+type MidiPermissionStateLike = "granted" | "denied" | "prompt";
+
+async function getConnectionFailureMessage(): Promise<string> {
+  const nav = navigator as Navigator & {
+    requestMIDIAccess?: (options?: { sysex?: boolean }) => Promise<unknown>;
+    permissions?: {
+      query: (descriptor: { name: string; sysex?: boolean }) => Promise<{ state: MidiPermissionStateLike }>;
+    };
+  };
+
+  if (!nav.requestMIDIAccess) {
+    return "WebMIDI is not supported in this browser";
+  }
+
+  try {
+    const status = await nav.permissions?.query({ name: "midi", sysex: false });
+    if (status?.state === "denied") {
+      return "WebMIDI permission is denied in this browser";
+    }
+  } catch {
+    // Ignore permission-query errors and fall back to a generic connection message.
+  }
+
+  return "APC mini mk2 input device not found";
+}
+
+function getInitErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("notallowed") ||
+    normalized.includes("denied") ||
+    normalized.includes("security") ||
+    normalized.includes("permission")
+  ) {
+    return "WebMIDI permission was denied";
+  }
+
+  return `MIDI init failed: ${message}`;
+}
+
 const sketch = (p: p5): void => {
-  let controller: APCMiniMK2Controller<DemoKey> | null = null;
+  const controller: APCMiniMK2Controller<DemoKey> = createController<DemoKey>({ mapping });
   let midiReady = false;
-  let midiAttempted = false;
+  let midiInitialized = false;
   let midiError: string | null = null;
 
   p.setup = () => {
     p.createCanvas(p.windowWidth, p.windowHeight);
     p.noStroke();
     p.textAlign(p.CENTER, p.CENTER);
+
+    void (async () => {
+      try {
+        await controller.init();
+        midiReady = controller.midiSuccess;
+        midiError = midiReady ? null : await getConnectionFailureMessage();
+      } catch (error) {
+        midiError = getInitErrorMessage(error);
+        midiReady = false;
+      } finally {
+        midiInitialized = true;
+      }
+    })();
   };
 
   p.draw = () => {
     const beat = (p.millis() / 1000) * (BPM / 60);
     controller?.update(beat);
+    midiReady = controller?.midiSuccess ?? false;
 
     const scene = controller?.radioValue("sceneSelect") ?? 0;
     const strobo = controller?.booleanValue("strobo") ?? false;
@@ -66,8 +122,8 @@ const sketch = (p: p5): void => {
     p.fill(255);
     p.textSize(14);
 
-    if (!midiAttempted) {
-      p.text("Click to initialize WebMIDI", p.width * 0.5, p.height - 32);
+    if (!midiInitialized) {
+      p.text("Initializing WebMIDI...", p.width * 0.5, p.height - 32);
       return;
     }
 
@@ -77,27 +133,6 @@ const sketch = (p: p5): void => {
     }
 
     p.text(`Fader0: ${fader.toFixed(2)} | Scene: ${scene} | Strobo: ${strobo ? "ON" : "OFF"}`, p.width * 0.5, p.height - 32);
-  };
-
-  p.mousePressed = async () => {
-    if (midiAttempted) {
-      return;
-    }
-
-    midiAttempted = true;
-    controller = createController<DemoKey>({ mapping });
-
-    try {
-      await controller.init();
-      midiReady = controller.midiSuccess;
-      if (!midiReady) {
-        midiError = "APC mini mk2 input device not found";
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      midiError = `MIDI init failed: ${message}`;
-      midiReady = false;
-    }
   };
 
   p.windowResized = () => {

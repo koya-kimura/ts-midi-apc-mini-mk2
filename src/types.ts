@@ -18,7 +18,7 @@ export interface APCMiniMK2Controller<TKey extends string = string> {
   destroy(): void;
   /** Update state with current beat position */
   update(beat: number): void;
-  /** Whether MIDI device was successfully connected */
+  /** Whether MIDI input is currently connected and receiving events */
   readonly midiSuccess: boolean;
 
   /** Get fader value (0-1) at index, respecting mute/random mode */

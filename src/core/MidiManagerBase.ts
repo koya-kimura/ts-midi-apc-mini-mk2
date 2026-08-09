@@ -19,6 +19,7 @@ type MidiPortMapLike<TPort> = {
 type MidiAccessLike = {
   inputs: MidiPortMapLike<MidiInputLike>;
   outputs: MidiPortMapLike<MidiOutputLike>;
+  onstatechange: ((event: unknown) => void) | null;
 };
 
 export abstract class MidiManagerBase {
@@ -47,12 +48,16 @@ export abstract class MidiManagerBase {
   private _midiOutput: MidiOutputLike | null = null;
   private _midiInput: MidiInputLike | null = null;
   private _midiAccess: MidiAccessLike | null = null;
+  private _midiOutputReady = false;
   private _midiSuccess = false;
+  private _hasCompletedDeviceSetup = false;
   private readonly _boundMIDIMessageHandler: (event: unknown) => void;
+  private readonly _boundMIDIStateChangeHandler: (event: unknown) => void;
 
   constructor(deviceName: string) {
     this.deviceName = deviceName;
     this._boundMIDIMessageHandler = this.onMIDIMessage.bind(this);
+    this._boundMIDIStateChangeHandler = this.onMIDIStateChange.bind(this);
   }
 
   public get midiSuccess(): boolean {
@@ -70,9 +75,15 @@ export abstract class MidiManagerBase {
       this._midiInput = null;
     }
 
+    if (this._midiAccess) {
+      this._midiAccess.onstatechange = null;
+    }
+
     this._midiOutput = null;
     this._midiAccess = null;
-    this._midiSuccess = false;
+    this._midiOutputReady = false;
+    this._hasCompletedDeviceSetup = false;
+    this.setMidiAvailability(false);
 
     this.onDestroy();
   }
@@ -99,43 +110,93 @@ export abstract class MidiManagerBase {
 
   private onMIDISuccess(midiAccess: MidiAccessLike): void {
     this._midiAccess = midiAccess;
+    midiAccess.onstatechange = this._boundMIDIStateChangeHandler;
+
+    this.refreshMIDIDeviceBindings();
+  }
+
+  private refreshMIDIDeviceBindings(): void {
+    if (!this._midiAccess) {
+      this.detachInputHandler();
+      this._midiOutput = null;
+      this.setMidiAvailability(false);
+      return;
+    }
+
     const inputs: MidiInputLike[] = [];
     const outputs: MidiOutputLike[] = [];
 
-    midiAccess.inputs.forEach((input) => {
+    this._midiAccess.inputs.forEach((input) => {
       inputs.push(input);
     });
 
-    midiAccess.outputs.forEach((output) => {
+    this._midiAccess.outputs.forEach((output) => {
       outputs.push(output);
     });
 
     const targetInput = inputs.find((i) => i.name === this.deviceName);
     const targetOutput = outputs.find((o) => o.name === this.deviceName);
 
-    if (!targetInput) {
+    if (this._midiInput && this._midiInput !== targetInput) {
+      this._midiInput.onmidimessage = null;
+    }
+
+    this._midiInput = targetInput ?? null;
+    this._midiOutput = targetOutput ?? null;
+
+    const outputReady = this._midiOutput !== null;
+    const outputBecameReady = outputReady && !this._midiOutputReady;
+    this._midiOutputReady = outputReady;
+
+    if (!this._midiInput) {
       console.log(`MIDI Input device '${this.deviceName}' not found.`);
-      this._midiSuccess = false;
+      this.setMidiAvailability(false);
       return;
     }
 
-    console.log(`MIDI device ready: ${this.deviceName}`);
+    this._midiInput.onmidimessage = this._boundMIDIMessageHandler;
 
-    this._midiInput = targetInput;
-    targetInput.onmidimessage = this._boundMIDIMessageHandler;
-
-    if (targetOutput) {
-      this._midiOutput = targetOutput;
+    if (!this._midiSuccess) {
+      console.log(`MIDI device ready: ${this.deviceName}`);
     }
 
-    this._midiSuccess = true;
+    if (!this._hasCompletedDeviceSetup) {
+      this._hasCompletedDeviceSetup = true;
+      this.onDeviceSetup();
+    }
 
-    this.onDeviceSetup();
+    this.setMidiAvailability(true);
+
+    if (outputBecameReady) {
+      this.onMidiOutputReady();
+    }
+  }
+
+  private detachInputHandler(): void {
+    if (!this._midiInput) {
+      return;
+    }
+
+    this._midiInput.onmidimessage = null;
+    this._midiInput = null;
+  }
+
+  private setMidiAvailability(available: boolean): void {
+    if (this._midiSuccess === available) {
+      return;
+    }
+
+    this._midiSuccess = available;
+    this.onMidiAvailabilityChanged(available);
   }
 
   private onMIDIFailure(error: unknown): void {
     console.error(`MIDI access failed. - ${error}`);
-    this._midiSuccess = false;
+    this.setMidiAvailability(false);
+  }
+
+  private onMIDIStateChange(_event: unknown): void {
+    this.refreshMIDIDeviceBindings();
   }
 
   private onMIDIMessage(event: unknown): void {
@@ -155,6 +216,10 @@ export abstract class MidiManagerBase {
   }
 
   protected onDeviceSetup(): void {}
+
+  protected onMidiAvailabilityChanged(_available: boolean): void {}
+
+  protected onMidiOutputReady(): void {}
 
   protected onDestroy(): void {}
 
