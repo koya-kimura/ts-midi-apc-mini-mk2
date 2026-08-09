@@ -13,7 +13,7 @@ npm install ts-midi-apc-mini-mk2
 ### GitHub install
 
 ```bash
-npm install github:kimurakoya/ts-midi-apc-mini-mk2
+npm install github:koya-kimura/ts-midi-apc-mini-mk2
 ```
 
 GitHub install 時は `prepare` が自動実行されるため、依存インストール時に `dist` がビルドされます。
@@ -103,12 +103,25 @@ controller.destroy();
 - Edge (latest)
 - Safari (latest)
 
+## 接続ライフサイクル
+
+- `init()` 実行後、対象デバイスの input が見つかると `midiSuccess` は `true` になります。
+- USB 抜線などで input が消えると `midiSuccess` は `false` に戻ります。
+- デバイス再接続時は WebMIDI の `statechange` を契機に自動再バインドを試行します。
+- input 復帰と output 復帰のタイミングがずれる場合でも、output 復帰時に現在状態の LED スナップショットを再送して表示を再同期します。
+
 注意:
 
 - WebMIDI の利用可否や権限仕様はブラウザごとに異なります。
 - ブラウザポリシー上必要な場合は、`init()` をユーザー操作イベント内で呼んでください。
 - デバイスの抜き差し時は自動で再バインドを試みます。
 - 本番 VJ システムでは `midiSuccess === false` を非致命分岐として扱ってください。
+
+## 既知の制約
+
+- WebMIDI 非対応環境では接続できません。
+- ブラウザや実行コンテキストにより、`init()` はユーザー操作イベント内で必要になる場合があります。
+- 権限拒否時はアプリ側で再試行導線を用意してください。
 
 ## FAQ
 
@@ -117,6 +130,10 @@ controller.destroy();
 - APC mini mk2 が接続されていない可能性があります。
 - ブラウザ権限が拒否されている可能性があります。
 - 実行コンテキストで WebMIDI が未対応の可能性があります。
+
+### Q. `midiSuccess` の意味は何ですか？
+
+初回 `init()` の成功フラグではなく、現在の入力接続状態を表す動的ステータスです。抜き差しで `true/false` が変化します。
 
 ### Q. When should `update()` be called?
 
@@ -144,6 +161,8 @@ npm run dev
 
 ブラウザで表示された URL の `/demo/` を開くと、`demo/index.html` から `demo/minimal.ts` を確認できます。
 例: `http://localhost:5173/demo/`
+
+`demo/minimal.ts` はページ読み込み時に自動で `init()` を実行し、権限拒否・未対応・未接続・再接続を画面ステータスに反映します。
 
 ## License
 
